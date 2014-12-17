@@ -126,18 +126,24 @@ object LinearModel {
       }
       (names, train, test)
     }
+    def eval(trainSet: List[(Vector[Double], Double)],testSet: List[(Vector[Double], Double)],names:Vector[String]): Double = {
+      val model = train(trainSet)
+      println("Learned params: ")
+      model.params.drop(1).zip(names.dropRight(1))
+        .sortBy(pn => math.abs(pn._1)).reverse
+        .foreach{ case (param,name) =>
+        println("  " + name + "\t" + param)
+      }
+      println("Train set cost: " + model.cost(trainSet)._1)
+      println("Test set cost:  " + model.cost(testSet)._1)
+      model.cost(testSet)._1
+    }
     val (whiteNames, whiteTrain, whiteTest) = readWineDataset(getClass.getResource("winequality-white.csv"))
-    val whiteWineSoln = train(whiteTrain)
-    println("White wine optimum params: ")
-    println(whiteWineSoln.params)
-    println("White wine train set cost: " + whiteWineSoln.cost(whiteTrain)._1)
-    println("White wine test set cost:  " + whiteWineSoln.cost(whiteTest)._1)
+    println("White wine:")
+    eval(whiteTrain, whiteTest, whiteNames)
     val (redNames, redTrain, redTest) = readWineDataset(getClass.getResource("winequality-red.csv"))
-    val redWineSoln = train(redTrain)
-    println("Red wine optimum params: ")
-    println(redWineSoln.params)
-    println("Red wine train set cost: " + redWineSoln.cost(redTrain)._1)
-    println("Red wine test set cost:  " + redWineSoln.cost(redTest)._1)
+    println("Red wine:")
+    eval(redTrain, redTest, whiteNames)
   }
 
   def main(args: Array[String]): Unit = {
