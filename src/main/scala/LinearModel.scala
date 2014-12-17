@@ -5,7 +5,10 @@ case class LinearModel(params: Vector[Double]) {
   lazy val n = params.length
 
   def predict(x: Vector[Double]) = {
-    (params,x).zipped.map(_*_).sum
+    (0 until n).map {
+      case 0 => params(0)
+      case i => params(i) * x(i-1)
+    }.sum
   }
 
   /**
@@ -29,7 +32,8 @@ case class LinearModel(params: Vector[Double]) {
     // the partial derivatives for each weight
     val derivs = (0 until n).par.map { i =>
       (examples,errs).zipped.map((ex,err) =>
-        ex._1(i) * err
+        if (i == 0) err
+        else ex._1(i-1) * err
       ).sum / m
     }.toVector
     (j, derivs)
@@ -65,12 +69,9 @@ object LinearModel {
       guessStream(initGuess, maxIterations).sliding(2)
     val maybeConverged: Option[Stream[(Vector[Double], Double)]] =
       adjacentGuesses.find { case Seq((_,cost0), (_,cost1)) => cost0 - cost1 < stopCond }
-    maybeConverged.map { case Seq(_, (currGuess,_)) => currGuess }
+    println()
+    maybeConverged.map { case Seq((params, _), _) => params }
         .getOrElse { throw new Error("Failed to converge after " + maxIterations + " iterations") }
-  }
-
-  private def addBias(dataset: List[(Vector[Double],Double)]) = dataset.map {
-    case (xs, y) => (1d+:xs, y)
   }
 
   def costFunction(dataset: List[(Vector[Double],Double)], lambda: Double): CostFunction = { params: Vector[Double] =>
@@ -88,10 +89,10 @@ object LinearModel {
    */
   def train(dataset: List[(Vector[Double], Double)], initGuess: Option[Vector[Double]]=None,
             stopCond: Double=0.00001, alpha:Double=0.00007, lambda:Double=1.0, maxIterations: Int = 100000) = {
-    val cf = costFunction(addBias(dataset), lambda)
+    val cf = costFunction(dataset, lambda)
     val optParams = gradientDescentMinimize(
       cf = cf,
-      initGuess = initGuess.getOrElse(Vector.fill(dataset.head._1.length)(Random.nextGaussian()*0.2)),
+      initGuess = initGuess.getOrElse(Vector.fill(dataset.head._1.length+1)(Random.nextGaussian()*0.2)),
       stopCond = stopCond,
       alpha = alpha,
       maxIterations = maxIterations)
