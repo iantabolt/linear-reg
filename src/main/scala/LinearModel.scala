@@ -126,24 +126,40 @@ object LinearModel {
       }
       (names, train, test)
     }
-    def eval(trainSet: List[(Vector[Double], Double)],testSet: List[(Vector[Double], Double)],names:Vector[String]): Double = {
-      val model = train(trainSet)
+    def eval(trainSet: List[(Vector[Double], Double)],
+             testSet: List[(Vector[Double], Double)],
+             names:Vector[String],
+             preprocess: Vector[Double]=>Vector[Double],
+             alpha: Double,
+             stopCond: Double): Double = {
+      def pp(dataset: List[(Vector[Double],Double)]) = {
+        dataset.map { case (xs,y) =>
+          (preprocess(xs),y)
+        }
+      }
+      val tr = pp(trainSet)
+      val te = pp(testSet)
+      val model = train(tr, alpha=alpha, stopCond=stopCond)
       println("Learned params: ")
       model.params.drop(1).zip(names.dropRight(1))
         .sortBy(pn => math.abs(pn._1)).reverse
         .foreach{ case (param,name) =>
         println("  " + name + "\t" + param)
       }
-      println("Train set cost: " + model.cost(trainSet)._1)
-      println("Test set cost:  " + model.cost(testSet)._1)
+      println("Train set cost: " + model.cost(tr)._1)
+      println("Test set cost:  " + model.cost(te)._1)
       model.cost(testSet)._1
     }
     val (whiteNames, whiteTrain, whiteTest) = readWineDataset(getClass.getResource("winequality-white.csv"))
     println("White wine:")
-    eval(whiteTrain, whiteTest, whiteNames)
+    val whiteNormalizer = FeatureNormalizer.fromTrainData(whiteTrain.map(_._1))
+    println("Using normalizer: " + whiteNormalizer)
+    eval(whiteTrain, whiteTest, whiteNames, whiteNormalizer, 1.0, 0.000001)
     val (redNames, redTrain, redTest) = readWineDataset(getClass.getResource("winequality-red.csv"))
     println("Red wine:")
-    eval(redTrain, redTest, whiteNames)
+    val redNormalizer = FeatureNormalizer.fromTrainData(redTrain.map(_._1))
+    println("Using normalizer: " + redNormalizer)
+    eval(redTrain, redTest, redNames, redNormalizer, 1.0, 0.000001)
   }
 
   def main(args: Array[String]): Unit = {
